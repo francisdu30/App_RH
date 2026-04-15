@@ -69,7 +69,7 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 """, unsafe_allow_html=True)
 
 # ─── PARAMS ────────────────────────────────────────────────────────────────────
-TYPES        = ["Paietest", "Fiscal", "Administratif RH"]
+TYPES        = ["Paie", "Fiscal", "Administratif RH"]
 FREQUENCES   = ["Mensuelle", "Annuelle", "Ponctuelle"]
 STATUTS      = ["À venir", "En cours", "Fait", "En retard"]
 REGLES_DL    = ["Fin de mois", "M+1", "Date fixe", "J+X"]
@@ -190,11 +190,18 @@ def load_data():
     actions_df = load_parquet("planning_rh/actions.parquet", ACTIONS_COLS)
     gen_df     = load_parquet("planning_rh/generateur.parquet", GENERATEUR_COLS)
 
-    # Crée les fichiers dans R2 s'ils n'existent pas encore
+    # Tente de créer les fichiers dans R2 s'ils n'existent pas encore
+    # Ne bloque pas l'app si R2 est inaccessible
     if actions_df.empty:
-        save_parquet(actions_df, "planning_rh/actions.parquet")
+        try:
+            save_parquet(actions_df, "planning_rh/actions.parquet")
+        except Exception as e:
+            st.warning(f"⚠️ Impossible de créer actions.parquet dans R2 : {e}")
     if gen_df.empty:
-        save_parquet(gen_df, "planning_rh/generateur.parquet")
+        try:
+            save_parquet(gen_df, "planning_rh/generateur.parquet")
+        except Exception as e:
+            st.warning(f"⚠️ Impossible de créer generateur.parquet dans R2 : {e}")
 
     st.session_state.actions_df = actions_df
     st.session_state.gen_df     = gen_df
