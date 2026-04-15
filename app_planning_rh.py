@@ -446,75 +446,66 @@ elif page == "📅 Planning":
 
         today = date.today()
 
+        # Calcul des périodes
+        week_start        = today - timedelta(days=today.weekday())
+        week_end          = week_start + timedelta(days=6)
+        month_start       = today.replace(day=1)
+        month_end         = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+        prev_month_end    = month_start - timedelta(days=1)
+        prev_month_start  = prev_month_end.replace(day=1)
+        next_month_start  = date(today.year + (today.month // 12), (today.month % 12) + 1, 1)
+        next_month_end    = date(next_month_start.year, next_month_start.month,
+                                 calendar.monthrange(next_month_start.year, next_month_start.month)[1])
+
+        # Session state
+        for k, v in [
+            ("periode", "Mois en cours"),
+            ("date_debut_custom", month_start),
+            ("date_fin_custom", month_end),
+            ("selected_action_id", None),
+            ("selected_date", None),
+        ]:
+            if k not in st.session_state:
+                st.session_state[k] = v
+
         # ── Rangée 1 : Période ──────────────────────────────────────────────
-        # Calcul semaine en cours
-        week_start = today - timedelta(days=today.weekday())
-        week_end   = week_start + timedelta(days=6)
-        # Mois en cours
-        month_start   = today.replace(day=1)
-        month_end     = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
-        # Mois précédent
-        prev_month_end   = month_start - timedelta(days=1)
-        prev_month_start = prev_month_end.replace(day=1)
-        # Mois suivant
-        next_month_start = date(today.year + (today.month // 12), (today.month % 12) + 1, 1)
-        next_month_end   = date(next_month_start.year, next_month_start.month,
-                                calendar.monthrange(next_month_start.year, next_month_start.month)[1])
-
-        if "periode" not in st.session_state:
-            st.session_state.periode = "Mois en cours"
-        if "date_debut_custom" not in st.session_state:
-            st.session_state.date_debut_custom = month_start
-        if "date_fin_custom" not in st.session_state:
-            st.session_state.date_fin_custom = month_end
-        if "selected_action_id" not in st.session_state:
-            st.session_state.selected_action_id = None
-        if "selected_date" not in st.session_state:
-            st.session_state.selected_date = None
-
-        st.markdown('<div class="section-title">Période</div>', unsafe_allow_html=True)
-        p_cols = st.columns(5)
         periodes = ["Semaine en cours", "Mois en cours", "Mois précédent", "Mois suivant", "Période spécifique"]
+        p_cols = st.columns(5)
         for i, p in enumerate(periodes):
             with p_cols[i]:
-                if st.button(p, use_container_width=True,
-                             type="primary" if st.session_state.periode == p else "secondary"):
+                active = st.session_state.periode == p
+                if st.button(p, use_container_width=True, type="primary" if active else "secondary", key=f"btn_periode_{i}"):
                     st.session_state.periode = p
                     st.session_state.selected_action_id = None
                     st.session_state.selected_date = None
                     st.rerun()
 
-        # Période spécifique
         if st.session_state.periode == "Période spécifique":
             c1, c2 = st.columns(2)
             with c1:
                 st.session_state.date_debut_custom = st.date_input("Du", value=st.session_state.date_debut_custom)
             with c2:
                 st.session_state.date_fin_custom = st.date_input("Au", value=st.session_state.date_fin_custom)
-            cal_start = st.session_state.date_debut_custom
-            cal_end   = st.session_state.date_fin_custom
+            cal_start, cal_end = st.session_state.date_debut_custom, st.session_state.date_fin_custom
         elif st.session_state.periode == "Semaine en cours":
             cal_start, cal_end = week_start, week_end
         elif st.session_state.periode == "Mois précédent":
             cal_start, cal_end = prev_month_start, prev_month_end
         elif st.session_state.periode == "Mois suivant":
             cal_start, cal_end = next_month_start, next_month_end
-        else:  # Mois en cours
+        else:
             cal_start, cal_end = month_start, month_end
 
         # ── Rangée 2 : Filtres ───────────────────────────────────────────────
-        st.markdown('<div class="section-title">Filtres</div>', unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:12px'></div>", unsafe_allow_html=True)
         f1, f2, f3, f4 = st.columns(4)
         with f1:
             f_statut = st.multiselect("Statut", STATUTS, default=["En retard", "En cours", "À venir"])
         with f2:
-            types_dispo = gen["type"].dropna().unique().tolist()
-            f_type = st.multiselect("Type", types_dispo, default=types_dispo)
+            f_type = st.multiselect("Type", gen["type"].dropna().unique().tolist(), default=gen["type"].dropna().unique().tolist())
         with f3:
-            resps_dispo = gen["responsable"].dropna().unique().tolist()
-            f_resp = st.multiselect("Responsable", resps_dispo, default=resps_dispo)
+            f_resp = st.multiselect("Responsable", gen["responsable"].dropna().unique().tolist(), default=gen["responsable"].dropna().unique().tolist())
         with f4:
-            prios_dispo = actions_df["priorite"].dropna().unique().tolist() if not actions_df.empty else PRIORITES
             f_prio = st.multiselect("Priorité", PRIORITES, default=PRIORITES)
 
         # ── Filtrage ─────────────────────────────────────────────────────────
@@ -525,40 +516,20 @@ elif page == "📅 Planning":
             gen["date_occurrence"].apply(lambda d: cal_start <= d <= cal_end if pd.notna(d) else False)
         ].copy()
 
-        # Jointure priorité
         if not actions_df.empty:
             prio_lookup = actions_df.set_index("id")["priorite"].to_dict()
             filtered["priorite"] = filtered["id_action"].map(prio_lookup)
             filtered = filtered[filtered["priorite"].isin(f_prio)]
 
-        # ── Calendrier ───────────────────────────────────────────────────────
-        st.markdown("---")
+        # ── Construction des semaines ────────────────────────────────────────
         all_dates = []
         d = cal_start
         while d <= cal_end:
             all_dates.append(d)
             d += timedelta(days=1)
 
-        # Regrouper par date
-        by_date = {}
-        for d in all_dates:
-            by_date[d] = filtered[filtered["date_occurrence"] == d]
+        by_date = {d: filtered[filtered["date_occurrence"] == d] for d in all_dates}
 
-        badge_color = {
-            "À venir":   "#1a6fa8",
-            "En cours":  "#177049",
-            "En retard": "#b81c1c",
-            "Fait":      "#555",
-        }
-        badge_bg = {
-            "À venir":   "#e8f4fd",
-            "En cours":  "#e6f9f0",
-            "En retard": "#fde8e8",
-            "Fait":      "#f0f0f0",
-        }
-
-        # Affichage par semaines
-        JOURS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
         weeks = []
         week = []
         for d in all_dates:
@@ -567,63 +538,103 @@ elif page == "📅 Planning":
                 weeks.append(week)
                 week = []
 
+        # Couleurs statut
+        STATUT_COLOR = {
+            "À venir":   {"bg": "#e8f4fd", "text": "#0c447c", "dot": "#378add"},
+            "En cours":  {"bg": "#eaf3de", "text": "#3b6d11", "dot": "#639922"},
+            "En retard": {"bg": "#fcebeb", "text": "#a32d2d", "dot": "#e24b4a"},
+            "Fait":      {"bg": "#f1efe8", "text": "#5f5e5a", "dot": "#888780"},
+        }
+
+        JOURS_COURT = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+
+        st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+
+        # ── Rendu calendrier ─────────────────────────────────────────────────
         for week in weeks:
             cols = st.columns(len(week))
             for i, d in enumerate(week):
                 with cols[i]:
                     rows_day = by_date[d]
                     is_today = (d == today)
-                    header_style = "background:#0f1117;color:#e0e4f0;" if is_today else "background:#f0f1f5;color:#1a1d2e;"
+                    is_selected_date = (st.session_state.selected_date == d)
 
-                    # En-tête date cliquable
+                    # En-tête date — style distinct du reste
+                    date_label = f"{JOURS_COURT[d.weekday()]}\n{d.day:02d}/{d.month:02d}"
+                    header_style = ""
+                    if is_today:
+                        header_style = "font-weight:600"
+
+                    # Bouton date : style propre, fond sombre si today
+                    n = len(rows_day)
+                    count_label = f"({n})" if n > 0 else ""
+
+                    # Affichage date comme un header card
+                    today_mark = "🔵 " if is_today else ""
                     if st.button(
-                        f"{JOURS[d.weekday()]} {d.strftime('%d/%m')}",
+                        f"{today_mark}{JOURS_COURT[d.weekday()]} {d.day:02d}/{d.month:02d} {count_label}",
                         key=f"date_{d}",
                         use_container_width=True,
-                        type="primary" if st.session_state.selected_date == d else "secondary"
+                        type="primary" if is_selected_date else "secondary",
                     ):
-                        if st.session_state.selected_date == d:
-                            st.session_state.selected_date = None
-                        else:
-                            st.session_state.selected_date = d
-                            st.session_state.selected_action_id = None
+                        st.session_state.selected_date = None if is_selected_date else d
+                        st.session_state.selected_action_id = None
                         st.rerun()
 
-                    # IDs des actions du jour
+                    # Actions du jour — badges colorés distincts des dates
                     if rows_day.empty:
-                        st.markdown('<div style="min-height:40px;color:#ccc;font-size:11px;text-align:center">—</div>', unsafe_allow_html=True)
+                        st.markdown(
+                            '<div style="text-align:center;color:var(--color-text-tertiary);'
+                            'font-size:12px;padding:6px 0;border-left:2px solid var(--color-border-tertiary);'
+                            'margin:2px 0">—</div>',
+                            unsafe_allow_html=True
+                        )
                     else:
                         for _, r in rows_day.iterrows():
-                            statut = r["statut"]
-                            bg  = badge_bg.get(statut, "#f0f0f0")
-                            col = badge_color.get(statut, "#555")
+                            sc   = STATUT_COLOR.get(r["statut"], STATUT_COLOR["À venir"])
+                            is_sel = st.session_state.selected_action_id == (d, r["id_action"])
+
+                            # Badge action : fond coloré selon statut, forme pill
+                            st.markdown(
+                                f'<div style="background:{sc["bg"]};border-left:3px solid {sc["dot"]};'
+                                f'border-radius:0 6px 6px 0;padding:3px 6px;margin:2px 0;'
+                                f'font-size:11px;font-weight:500;color:{sc["text"]};cursor:pointer;'
+                                f'{"outline:2px solid "+sc["dot"]+";" if is_sel else ""}">'
+                                f'#{r["id_action"]}</div>',
+                                unsafe_allow_html=True
+                            )
                             if st.button(
-                                f"#{r['id_action']}",
-                                key=f"action_{d}_{r['id_action']}_{r['nom_action']}",
+                                f"#{r['id_action']} {r['nom_action'][:12]}…" if len(r['nom_action']) > 12 else f"#{r['id_action']} {r['nom_action']}",
+                                key=f"act_{d}_{r['id_action']}_{r['nom_action'][:8]}",
                                 use_container_width=True,
                             ):
-                                if st.session_state.selected_action_id == (d, r['id_action']):
+                                if st.session_state.selected_action_id == (d, r["id_action"]):
                                     st.session_state.selected_action_id = None
                                 else:
-                                    st.session_state.selected_action_id = (d, r['id_action'])
+                                    st.session_state.selected_action_id = (d, r["id_action"])
                                     st.session_state.selected_date = None
                                 st.rerun()
 
-        # ── Détail action sélectionnée ────────────────────────────────────────
+        # ── Légende ──────────────────────────────────────────────────────────
+        st.markdown("""
+        <div style="display:flex;gap:16px;margin-top:8px;flex-wrap:wrap">
+            <span style="font-size:11px;color:var(--color-text-secondary)">Légende :</span>
+            <span style="font-size:11px;background:#e8f4fd;color:#0c447c;border-left:3px solid #378add;padding:2px 8px;border-radius:0 4px 4px 0">À venir</span>
+            <span style="font-size:11px;background:#eaf3de;color:#3b6d11;border-left:3px solid #639922;padding:2px 8px;border-radius:0 4px 4px 0">En cours</span>
+            <span style="font-size:11px;background:#fcebeb;color:#a32d2d;border-left:3px solid #e24b4a;padding:2px 8px;border-radius:0 4px 4px 0">En retard</span>
+            <span style="font-size:11px;background:#f1efe8;color:#5f5e5a;border-left:3px solid #888780;padding:2px 8px;border-radius:0 4px 4px 0">Fait</span>
+        </div>
+        """, unsafe_allow_html=True)
+
         st.markdown("---")
 
+        # ── Détail action ────────────────────────────────────────────────────
         if st.session_state.selected_action_id:
             sel_date, sel_id = st.session_state.selected_action_id
-            detail = filtered[
-                (filtered["id_action"] == sel_id) &
-                (filtered["date_occurrence"] == sel_date)
-            ]
+            detail = filtered[(filtered["id_action"] == sel_id) & (filtered["date_occurrence"] == sel_date)]
             if not detail.empty:
-                r = detail.iloc[0]
-                statut = r["statut"]
-                bg  = badge_bg.get(statut, "#f0f0f0")
-                col = badge_color.get(statut, "#555")
-
+                r  = detail.iloc[0]
+                sc = STATUT_COLOR.get(r["statut"], STATUT_COLOR["À venir"])
                 act_row = actions_df[actions_df["id"] == sel_id].iloc[0] if not actions_df.empty and sel_id in actions_df["id"].values else None
                 prio = act_row["priorite"] if act_row is not None else "—"
                 freq = act_row["frequence"] if act_row is not None else "—"
@@ -631,23 +642,26 @@ elif page == "📅 Planning":
                 st.markdown(f"""
                 <div class="card">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-                        <div style="font-size:18px;font-weight:700">#{sel_id} — {r['nom_action']}</div>
-                        <span style="background:{bg};color:{col};padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600">{statut}</span>
+                        <div>
+                            <div style="font-size:11px;color:var(--color-text-secondary);text-transform:uppercase;font-weight:600;letter-spacing:.06em;margin-bottom:4px">Détail action</div>
+                            <div style="font-size:17px;font-weight:600">#{sel_id} — {r['nom_action']}</div>
+                        </div>
+                        <span style="background:{sc['bg']};color:{sc['text']};border-left:3px solid {sc['dot']};
+                              padding:5px 14px;border-radius:0 20px 20px 0;font-size:12px;font-weight:600">{r['statut']}</span>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;font-size:13px">
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Type</div><div>{r['type']}</div></div>
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Responsable</div><div>{r['responsable']}</div></div>
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Priorité</div><div>{prio}</div></div>
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Fréquence</div><div>{freq}</div></div>
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Occurrence</div><div>{r['date_occurrence'].strftime('%d/%m/%Y')}</div></div>
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Date fin</div><div>{r['date_fin'].strftime('%d/%m/%Y') if pd.notna(r['date_fin']) else '—'}</div></div>
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Deadline</div><div>{r['deadline'].strftime('%d/%m/%Y') if pd.notna(r['deadline']) else '—'}</div></div>
-                        <div><div style="color:#8890a8;font-size:11px;text-transform:uppercase;font-weight:600">Ressource</div><div>{r['nom_ressource'] or '—'}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Type</div><div>{r['type']}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Responsable</div><div>{r['responsable']}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Priorité</div><div>{prio}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Fréquence</div><div>{freq}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Occurrence</div><div>{r['date_occurrence'].strftime('%d/%m/%Y')}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Date fin</div><div>{r['date_fin'].strftime('%d/%m/%Y') if pd.notna(r['date_fin']) else '—'}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Deadline</div><div>{r['deadline'].strftime('%d/%m/%Y') if pd.notna(r['deadline']) else '—'}</div></div>
+                        <div><div style="color:var(--color-text-secondary);font-size:11px;text-transform:uppercase;font-weight:600;margin-bottom:3px">Ressource</div><div>{r['nom_ressource'] or '—'}</div></div>
                     </div>
                 </div>""", unsafe_allow_html=True)
 
-                # Marquer comme fait
-                if statut != "Fait":
+                if r["statut"] != "Fait":
                     if st.button("✅ Marquer comme Fait", type="primary"):
                         mask = (
                             (st.session_state.gen_df["id_action"] == sel_id) &
@@ -664,34 +678,36 @@ elif page == "📅 Planning":
                             st.error(f"Erreur R2 : {e}")
 
         elif st.session_state.selected_date:
-            sel_date = st.session_state.selected_date
+            sel_date   = st.session_state.selected_date
             day_actions = filtered[filtered["date_occurrence"] == sel_date]
             st.markdown(f"### Actions du {sel_date.strftime('%A %d %B %Y')}")
             if day_actions.empty:
                 st.info("Aucune action ce jour.")
             else:
-                badge_map_cls = {"À venir": "badge-avenir", "En cours": "badge-encours", "En retard": "badge-retard", "Fait": "badge-fait"}
-                rows_html = ""
                 for _, r in day_actions.iterrows():
-                    cls = badge_map_cls.get(r["statut"], "badge-avenir")
-                    dl  = r["deadline"].strftime("%d/%m/%Y") if pd.notna(r["deadline"]) else "—"
+                    sc = STATUT_COLOR.get(r["statut"], STATUT_COLOR["À venir"])
                     act_row = actions_df[actions_df["id"] == r["id_action"]] if not actions_df.empty else pd.DataFrame()
                     prio = act_row.iloc[0]["priorite"] if not act_row.empty else "—"
-                    rows_html += f"""
-                    <tr>
-                        <td style="font-family:'DM Mono',monospace;font-size:11px;color:#8890a8">#{r['id_action']}</td>
-                        <td><b>{r['nom_action']}</b></td>
-                        <td>{r['type']}</td>
-                        <td>{r['responsable']}</td>
-                        <td>{prio}</td>
-                        <td>{dl}</td>
-                        <td><span class="badge {cls}">{r['statut']}</span></td>
-                    </tr>"""
-                st.markdown(f"""
-                <div class="card" style="padding:0;overflow:hidden">
-                <table class="planning-table">
-                    <thead><tr><th>ID</th><th>Action</th><th>Type</th><th>Responsable</th><th>Priorité</th><th>Deadline</th><th>Statut</th></tr></thead>
-                    <tbody>{rows_html}</tbody>
-                </table></div>""", unsafe_allow_html=True)
+                    dl   = r["deadline"].strftime("%d/%m/%Y") if pd.notna(r["deadline"]) else "—"
+                    st.markdown(f"""
+                    <div class="card" style="padding:14px 18px;margin-bottom:8px">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <div style="font-size:14px;font-weight:600">#{r['id_action']} — {r['nom_action']}</div>
+                            <span style="background:{sc['bg']};color:{sc['text']};border-left:3px solid {sc['dot']};
+                                  padding:3px 12px;border-radius:0 20px 20px 0;font-size:11px;font-weight:600">{r['statut']}</span>
+                        </div>
+                        <div style="display:flex;gap:24px;margin-top:8px;font-size:12px;color:var(--color-text-secondary)">
+                            <span>Type : <b>{r['type']}</b></span>
+                            <span>Resp. : <b>{r['responsable']}</b></span>
+                            <span>Priorité : <b>{prio}</b></span>
+                            <span>Deadline : <b>{dl}</b></span>
+                        </div>
+                    </div>""", unsafe_allow_html=True)
+
         else:
-            st.markdown('<div style="color:#8890a8;text-align:center;padding:20px">Cliquez sur une date ou un ID d\'action pour voir les détails</div>', unsafe_allow_html=True)
+            st.markdown(
+                '<div style="text-align:center;color:var(--color-text-tertiary);padding:20px;font-size:13px">'
+                'Cliquez sur une date pour voir toutes ses actions, ou sur un badge coloré pour le détail d\'une action.'
+                '</div>',
+                unsafe_allow_html=True
+            )
