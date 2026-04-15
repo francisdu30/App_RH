@@ -88,6 +88,7 @@ GENERATEUR_COLS = [
 ]
 
 
+
 def _headers():
     return {"Authorization": f"Bearer {st.secrets['R2_TOKEN']}"}
 
