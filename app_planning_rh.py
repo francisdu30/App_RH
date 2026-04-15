@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
+import boto3
 import io
-import requests
 from datetime import date, datetime, timedelta
 import calendar
 
@@ -87,23 +87,28 @@ GENERATEUR_COLS = [
     "nom_ressource", "date_traitement"
 ]
 
+# ─── R2 CLIENT (boto3) ─────────────────────────────────────────────────────────
+# Secrets à configurer dans Streamlit Community Cloud > Settings > Secrets :
+#   R2_ACCOUNT_ID = "a262c0d96a51c4a4bcc0e68480df9ec5"
+#   R2_ACCESS_KEY = "39d6131812a47246e744bfbc6babb039"
+#   R2_SECRET_KEY = "8b25d7231a475956488f89b992e4fefbf342889766f3003fc82c969ae1ad89c9"
+#   R2_BUCKET     = "apprh"
 
-
-def _headers():
-    return {"Authorization": f"Bearer {st.secrets['R2_TOKEN']}"}
-
-def _url(key: str) -> str:
-    return (
-        f"https://api.cloudflare.com/client/v4/accounts/"
-        f"{st.secrets['R2_ACCOUNT_ID']}/r2/buckets/{st.secrets['R2_BUCKET']}/objects/{key}"
+@st.cache_resource
+def get_r2_client():
+    return boto3.client(
+        "s3",
+        endpoint_url=f"https://{st.secrets['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
+        aws_access_key_id=st.secrets["R2_ACCESS_KEY"],
+        aws_secret_access_key=st.secrets["R2_SECRET_KEY"],
+        region_name="auto",
     )
 
 def load_parquet(key: str, cols: list) -> pd.DataFrame:
     try:
-        resp = requests.get(_url(key), headers=_headers(), timeout=15)
-        if resp.status_code == 200:
-            return pd.read_parquet(io.BytesIO(resp.content))
-        return pd.DataFrame(columns=cols)
+        s3  = get_r2_client()
+        obj = s3.get_object(Bucket=st.secrets["R2_BUCKET"], Key=key)
+        return pd.read_parquet(io.BytesIO(obj["Body"].read()))
     except Exception:
         return pd.DataFrame(columns=cols)
 
@@ -111,14 +116,8 @@ def save_parquet(df: pd.DataFrame, key: str):
     buf = io.BytesIO()
     df.to_parquet(buf, index=False)
     buf.seek(0)
-    resp = requests.put(
-        _url(key),
-        headers={**_headers(), "Content-Type": "application/octet-stream"},
-        data=buf.getvalue(),
-        timeout=15
-    )
-    if resp.status_code not in (200, 201):
-        raise Exception(f"Erreur upload R2 : {resp.status_code} — {resp.text}")
+    s3 = get_r2_client()
+    s3.put_object(Bucket=st.secrets["R2_BUCKET"], Key=key, Body=buf.getvalue())
 
 # ─── BUSINESS LOGIC ────────────────────────────────────────────────────────────
 def compute_deadline(action: dict, occurrence_date: date) -> date:
@@ -189,20 +188,17 @@ if "gen_df" not in st.session_state:
 def load_data():
     actions_df = load_parquet("planning_rh/actions.parquet", ACTIONS_COLS)
     gen_df     = load_parquet("planning_rh/generateur.parquet", GENERATEUR_COLS)
-
-    # Tente de créer les fichiers dans R2 s'ils n'existent pas encore
-    # Ne bloque pas l'app si R2 est inaccessible
+    # Crée les fichiers dans R2 s'ils n'existent pas encore
     if actions_df.empty:
         try:
             save_parquet(actions_df, "planning_rh/actions.parquet")
         except Exception as e:
-            st.warning(f"⚠️ Impossible de créer actions.parquet dans R2 : {e}")
+            st.warning(f"⚠️ Impossible de créer actions.parquet : {e}")
     if gen_df.empty:
         try:
             save_parquet(gen_df, "planning_rh/generateur.parquet")
         except Exception as e:
-            st.warning(f"⚠️ Impossible de créer generateur.parquet dans R2 : {e}")
-
+            st.warning(f"⚠️ Impossible de créer generateur.parquet : {e}")
     st.session_state.actions_df = actions_df
     st.session_state.gen_df     = gen_df
 
