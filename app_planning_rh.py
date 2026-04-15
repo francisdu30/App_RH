@@ -187,8 +187,17 @@ if "gen_df" not in st.session_state:
     st.session_state.gen_df = None
 
 def load_data():
-    st.session_state.actions_df = load_parquet("planning_rh/actions.parquet", ACTIONS_COLS)
-    st.session_state.gen_df     = load_parquet("planning_rh/generateur.parquet", GENERATEUR_COLS)
+    actions_df = load_parquet("planning_rh/actions.parquet", ACTIONS_COLS)
+    gen_df     = load_parquet("planning_rh/generateur.parquet", GENERATEUR_COLS)
+
+    # Crée les fichiers dans R2 s'ils n'existent pas encore
+    if actions_df.empty:
+        save_parquet(actions_df, "planning_rh/actions.parquet")
+    if gen_df.empty:
+        save_parquet(gen_df, "planning_rh/generateur.parquet")
+
+    st.session_state.actions_df = actions_df
+    st.session_state.gen_df     = gen_df
 
 def reload_and_regen():
     gen_df = generate_occurrences(st.session_state.actions_df)
