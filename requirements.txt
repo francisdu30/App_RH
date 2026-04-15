@@ -1,0 +1,8 @@
+# ── requirements.txt ───────────────────────────────────────────────────────
+# À placer à la racine de ton repo GitHub
+
+streamlit>=1.32.0
+pandas>=2.0.0
+pyarrow>=14.0.0
+boto3>=1.34.0
+numpy>=1.26.0
