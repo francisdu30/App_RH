@@ -556,133 +556,112 @@ elif page == "📅 Planning":
 
         by_date = {d: filtered[filtered["date_occurrence"] == d] for d in all_dates}
 
-        # ── Rendu HTML du calendrier ─────────────────────────────────────────
-        # Construire le HTML des cellules
-        cells_html = ""
-        for d in visible_dates:
-            rows_day = by_date[d]
-            is_today = (d == today)
-            n = len(rows_day)
+        # ── Rendu calendrier via colonnes Streamlit ──────────────────────────
+        periode_label = (
+            visible_dates[0].strftime("%d/%m") + " – " + visible_dates[-1].strftime("%d/%m/%Y")
+        )
+        st.markdown(
+            '<p style="font-size:11px;color:#8890a8;text-align:center;margin-bottom:6px;'
+            'font-weight:600;letter-spacing:.06em;text-transform:uppercase">'
+            + periode_label + "</p>",
+            unsafe_allow_html=True,
+        )
 
-            # Header date
-            date_bg    = "#0f1117" if is_today else "#f5f6fa"
-            date_color = "#e0e4f0" if is_today else "#1a1d2e"
-            date_weight = "700" if is_today else "500"
-            count_badge = f'<span style="background:rgba(255,255,255,0.2);color:{date_color};font-size:10px;padding:1px 5px;border-radius:10px;margin-left:4px">{n}</span>' if n > 0 else ""
+        # Flèches + colonnes jours
+        arrow_left  = 0.4 if (use_nav and can_prev) else 0.0
+        arrow_right = 0.4 if (use_nav and can_next) else 0.0
+        day_weight  = [1] * len(visible_dates)
+        col_weights = ([arrow_left] if arrow_left else []) + day_weight + ([arrow_right] if arrow_right else [])
+        all_cols    = st.columns(col_weights)
+        col_offset  = 0
 
-            actions_html = ""
-            if rows_day.empty:
-                actions_html = '<div style="color:#bbb;font-size:11px;text-align:center;padding:8px 0">—</div>'
-            else:
-                for _, r in rows_day.iterrows():
-                    sc  = STATUT_COLOR.get(r["statut"], STATUT_COLOR["À venir"])
-                    nom = r["nom_action"][:14] + "…" if len(r["nom_action"]) > 14 else r["nom_action"]
-                    is_sel = st.session_state.selected_action_id == (d, r["id_action"])
-                    sel_style = f"outline:2px solid {sc['dot']};" if is_sel else ""
-                    actions_html += (
-                        f'<div onclick="window.parent.postMessage({{type:\'streamlit:setComponentValue\','
-                        f'value:\'act_{d}_{r["id_action"]}\'}},\'*\')" '
-                        f'style="background:{sc["bg"]};border-left:3px solid {sc["dot"]};'
-                        f'border-radius:0 6px 6px 0;padding:4px 7px;margin:3px 0;'
-                        f'font-size:11px;font-weight:500;color:{sc["text"]};cursor:pointer;{sel_style}">'
-                        f'<span style="font-family:monospace;font-weight:700">#{r["id_action"]}</span>'
-                        f'<span style="margin-left:4px;opacity:.7">{nom}</span>'
-                        f'</div>'
-                    )
-
-            cells_html += f"""
-            <div style="flex:1;min-width:0;border-right:1px solid #e8eaf0">
-                <div style="background:{date_bg};color:{date_color};font-weight:{date_weight};
-                            font-size:12px;padding:8px 6px;text-align:center;
-                            border-bottom:2px solid {'#378add' if is_today else '#e8eaf0'};
-                            cursor:pointer;user-select:none"
-                     data-date="{d}">
-                    {JOURS_COURT[d.weekday()]}<br>
-                    <span style="font-size:16px">{d.day:02d}</span>
-                    <span style="font-size:10px;opacity:.7">/{d.month:02d}</span>
-                    {count_badge}
-                </div>
-                <div style="padding:4px 3px;min-height:60px">
-                    {actions_html}
-                </div>
-            </div>"""
-
-        # Flèches de navigation
-        nav_left  = ""
-        nav_right = ""
-        if use_nav:
-            if can_prev:
-                nav_left = """
-                <div style="display:flex;align-items:center;padding:0 4px">
-                    <div id="btn_prev" style="width:28px;height:28px;border-radius:50%;
-                         background:#0f1117;color:#e0e4f0;display:flex;align-items:center;
-                         justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0">‹</div>
-                </div>"""
-            else:
-                nav_left = '<div style="width:36px;flex-shrink:0"></div>'
-
-            if can_next:
-                nav_right = """
-                <div style="display:flex;align-items:center;padding:0 4px">
-                    <div id="btn_next" style="width:28px;height:28px;border-radius:50%;
-                         background:#0f1117;color:#e0e4f0;display:flex;align-items:center;
-                         justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0">›</div>
-                </div>"""
-            else:
-                nav_right = '<div style="width:36px;flex-shrink:0"></div>'
-
-        periode_label = f"{visible_dates[0].strftime('%d/%m')} – {visible_dates[-1].strftime('%d/%m/%Y')}"
-
-        st.markdown(f"""
-        <div style="font-size:11px;color:#8890a8;text-align:center;margin-bottom:6px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">
-            {periode_label}
-        </div>
-        <div style="display:flex;border:1px solid #e8eaf0;border-radius:12px;overflow:hidden;background:#fff">
-            {nav_left}
-            <div style="display:flex;flex:1;min-width:0">
-                {cells_html}
-            </div>
-            {nav_right}
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Boutons invisibles pour navigation et sélection actions
-        st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
-
-        nav_cols = st.columns([1, 6, 1])
-        if use_nav:
-            with nav_cols[0]:
-                if can_prev and st.button("‹", key="nav_prev", use_container_width=True):
+        # Flèche gauche
+        if arrow_left:
+            with all_cols[0]:
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                if st.button("◀", key="nav_prev", use_container_width=True):
                     st.session_state.cal_week_offset = max(0, st.session_state.cal_week_offset - 7)
                     st.rerun()
-            with nav_cols[2]:
-                if can_next and st.button("›", key="nav_next", use_container_width=True):
-                    st.session_state.cal_week_offset = min(max_offset, st.session_state.cal_week_offset + 7)
-                    st.rerun()
+            col_offset = 1
 
-        # Boutons cliquables pour chaque action (invisibles, déclenchés par le HTML)
-        # On les affiche en dessous sous forme compacte
-        action_btn_cols = st.columns(len(visible_dates))
+        # Colonnes jours
         for i, d in enumerate(visible_dates):
             rows_day = by_date[d]
-            with action_btn_cols[i]:
-                # Bouton date
-                if st.button(f"{d.day:02d}/{d.month:02d}", key=f"dsel_{d}", use_container_width=True,
-                             type="primary" if st.session_state.selected_date == d else "secondary"):
-                    st.session_state.selected_date = None if st.session_state.selected_date == d else d
+            is_today = d == today
+            col_idx  = col_offset + i
+
+            with all_cols[col_idx]:
+                # ── Header date ──────────────────────────────────────────
+                hdr_bg  = "#0f1117" if is_today else "#f5f6fa"
+                hdr_fg  = "#e0e4f0" if is_today else "#1a1d2e"
+                hdr_bdr = "#378add" if is_today else "#e8eaf0"
+                n       = len(rows_day)
+                cnt     = f" ({n})" if n > 0 else ""
+                st.markdown(
+                    f'<div style="background:{hdr_bg};color:{hdr_fg};text-align:center;'
+                    f'border-bottom:2px solid {hdr_bdr};border-radius:8px 8px 0 0;'
+                    f'padding:6px 4px 4px;font-size:11px;font-weight:600;'
+                    f'margin-bottom:2px">'
+                    f'{JOURS_COURT[d.weekday()]}<br>'
+                    f'<span style="font-size:18px;font-weight:700">{d.day}</span>'
+                    f'<span style="font-size:10px;opacity:.6">/{d.month:02d}</span>'
+                    f'<br><span style="font-size:10px;opacity:.7">{cnt}</span>'
+                    f"</div>",
+                    unsafe_allow_html=True,
+                )
+
+                # Bouton sélection date (invisible sous le header)
+                if st.button(
+                    "📅" if st.session_state.selected_date == d else "·",
+                    key=f"dsel_{d}",
+                    use_container_width=True,
+                    type="primary" if st.session_state.selected_date == d else "secondary",
+                ):
+                    st.session_state.selected_date = (
+                        None if st.session_state.selected_date == d else d
+                    )
                     st.session_state.selected_action_id = None
                     st.rerun()
-                # Boutons actions
-                for _, r in rows_day.iterrows():
-                    sc = STATUT_COLOR.get(r["statut"], STATUT_COLOR["À venir"])
-                    label = f"#{r['id_action']}"
-                    if st.button(label, key=f"asel_{d}_{r['id_action']}", use_container_width=True):
-                        if st.session_state.selected_action_id == (d, r["id_action"]):
-                            st.session_state.selected_action_id = None
-                        else:
-                            st.session_state.selected_action_id = (d, r["id_action"])
-                            st.session_state.selected_date = None
-                        st.rerun()
+
+                # ── Actions du jour ───────────────────────────────────────
+                if rows_day.empty:
+                    st.markdown(
+                        '<div style="text-align:center;color:#ccc;font-size:11px;padding:6px 0">—</div>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    for _, r in rows_day.iterrows():
+                        sc     = STATUT_COLOR.get(r["statut"], STATUT_COLOR["À venir"])
+                        is_sel = st.session_state.selected_action_id == (d, r["id_action"])
+                        outline = f"outline:2px solid {sc['dot']};" if is_sel else ""
+                        # Badge visuel coloré
+                        st.markdown(
+                            f'<div style="background:{sc["bg"]};color:{sc["text"]};'
+                            f'border-left:3px solid {sc["dot"]};border-radius:0 6px 6px 0;'
+                            f'padding:3px 6px;margin:2px 0;font-size:11px;font-weight:600;{outline}">'
+                            f'#{r["id_action"]}</div>',
+                            unsafe_allow_html=True,
+                        )
+                        # Bouton cliquable sous le badge
+                        nom = r["nom_action"]
+                        lbl = ("#" + str(r["id_action"]) + " " + (nom[:10] + "…" if len(nom) > 10 else nom))
+                        if st.button(lbl, key=f"asel_{d}_{r['id_action']}", use_container_width=True):
+                            if st.session_state.selected_action_id == (d, r["id_action"]):
+                                st.session_state.selected_action_id = None
+                            else:
+                                st.session_state.selected_action_id = (d, r["id_action"])
+                                st.session_state.selected_date = None
+                            st.rerun()
+
+        # Flèche droite
+        if arrow_right:
+            with all_cols[-1]:
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                if st.button("▶", key="nav_next", use_container_width=True):
+                    st.session_state.cal_week_offset = min(
+                        max_offset, st.session_state.cal_week_offset + 7
+                    )
+                    st.rerun()
 
         # ── Légende ──────────────────────────────────────────────────────────
         st.markdown("""
