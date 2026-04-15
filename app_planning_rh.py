@@ -79,13 +79,80 @@ PRIORITES    = ["Basse", "Moyenne", "Haute", "Critique"]
 ACTIONS_COLS = [
     "id", "nom_action", "type", "frequence", "date_debut",
     "duree", "regle_deadline", "jour_deadline", "mois_specifique",
-    "responsable", "priorite", "actif", "nom_ressource"
+    "responsable", "priorite", "actif", "nom_ressource", "id_ressource"
 ]
 GENERATEUR_COLS = [
     "id_action", "nom_action", "date_occurrence", "date_debut",
     "date_fin", "deadline", "statut", "responsable", "type",
-    "nom_ressource", "date_traitement"
+    "nom_ressource", "id_ressource", "date_traitement", "id_contrat"
 ]
+CONTRATS_COLS = [
+    "id_contrat", "id_ressource", "nom_ressource", "type_contrat",
+    "date_debut", "date_fin", "date_fin_essai", "poste", "salaire",
+    "temps_travail", "lieu_travail", "statut_contrat", "notes"
+]
+TYPES_CONTRAT   = ["CDI", "CDD", "Intérim", "Alternance", "Stage", "Freelance", "Autre"]
+TEMPS_TRAVAIL   = ["Temps plein", "Temps partiel 80%", "Temps partiel 50%", "Autre"]
+STATUTS_CONTRAT = ["Actif", "À venir", "Terminé", "Suspendu"]
+
+ACTIONS_CONTRAT = {
+    "CDI": [
+        {"nom": "Signature contrat",         "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Remise équipement",          "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Visite médicale embauche",   "type": "Administratif RH", "duree": 1, "regle": "M+1",        "jour": 30},
+        {"nom": "Déclaration DPAE",           "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Inscription mutuelle",       "type": "Administratif RH", "duree": 3, "regle": "M+1",        "jour": 15},
+        {"nom": "Fin période d'essai",        "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Entretien période d'essai",  "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Paie du mois",               "type": "Paie",             "duree": 3, "regle": "Fin de mois","jour": 30},
+        {"nom": "Solde de tout compte",       "type": "Paie",             "duree": 2, "regle": "M+1",        "jour": 5},
+        {"nom": "Attestation employeur",      "type": "Administratif RH", "duree": 1, "regle": "M+1",        "jour": 5},
+    ],
+    "CDD": [
+        {"nom": "Signature contrat",         "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Déclaration DPAE",          "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Visite médicale embauche",  "type": "Administratif RH", "duree": 1, "regle": "M+1",        "jour": 30},
+        {"nom": "Inscription mutuelle",      "type": "Administratif RH", "duree": 3, "regle": "M+1",        "jour": 15},
+        {"nom": "Fin période d'essai",       "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Paie du mois",              "type": "Paie",             "duree": 3, "regle": "Fin de mois","jour": 30},
+        {"nom": "Renouvellement CDD",        "type": "Administratif RH", "duree": 2, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Solde de tout compte",      "type": "Paie",             "duree": 2, "regle": "M+1",        "jour": 5},
+        {"nom": "Attestation employeur",     "type": "Administratif RH", "duree": 1, "regle": "M+1",        "jour": 5},
+        {"nom": "Certificat de travail",     "type": "Administratif RH", "duree": 1, "regle": "M+1",        "jour": 5},
+    ],
+    "Alternance": [
+        {"nom": "Signature contrat",         "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Déclaration DPAE",          "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Enregistrement OPCO",       "type": "Administratif RH", "duree": 5, "regle": "M+1",        "jour": 15},
+        {"nom": "Visite médicale",           "type": "Administratif RH", "duree": 1, "regle": "M+1",        "jour": 30},
+        {"nom": "Paie du mois",              "type": "Paie",             "duree": 3, "regle": "Fin de mois","jour": 30},
+        {"nom": "Bilan mi-parcours",         "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Fin de contrat",            "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+    ],
+    "Stage": [
+        {"nom": "Convention de stage",            "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Déclaration accueil stagiaire",  "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Gratification mensuelle",        "type": "Paie",             "duree": 2, "regle": "Fin de mois","jour": 30},
+        {"nom": "Bilan mi-stage",                 "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Attestation de stage",           "type": "Administratif RH", "duree": 1, "regle": "M+1",        "jour": 5},
+    ],
+    "Intérim": [
+        {"nom": "Contrat de mission",        "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Déclaration DPAE",          "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Paie du mois",              "type": "Paie",             "duree": 3, "regle": "Fin de mois","jour": 30},
+        {"nom": "Fin de mission",            "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+    ],
+    "Freelance": [
+        {"nom": "Signature contrat prestation","type": "Administratif RH","duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Facture mensuelle",           "type": "Fiscal",           "duree": 2, "regle": "Fin de mois","jour": 30},
+        {"nom": "Fin de mission",              "type": "Administratif RH","duree": 1, "regle": "Date fixe",  "jour": 1},
+    ],
+    "Autre": [
+        {"nom": "Signature contrat",         "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Déclaration DPAE",          "type": "Administratif RH", "duree": 1, "regle": "Date fixe",  "jour": 1},
+        {"nom": "Paie du mois",              "type": "Paie",             "duree": 3, "regle": "Fin de mois","jour": 30},
+    ],
+}
 
 # ─── R2 CLIENT (boto3) ─────────────────────────────────────────────────────────
 # Secrets à configurer dans Streamlit Community Cloud > Settings > Secrets :
@@ -175,7 +242,9 @@ def generate_occurrences(actions_df: pd.DataFrame) -> pd.DataFrame:
                 "responsable": action.get("responsable", ""),
                 "type": action.get("type", ""),
                 "nom_ressource": action.get("nom_ressource", ""),
+                "id_ressource": action.get("id_ressource", None),
                 "date_traitement": None,
+                "id_contrat": None,
             })
     return pd.DataFrame(rows) if rows else pd.DataFrame(columns=GENERATEUR_COLS)
 
@@ -184,23 +253,22 @@ if "actions_df" not in st.session_state:
     st.session_state.actions_df = None
 if "gen_df" not in st.session_state:
     st.session_state.gen_df = None
+if "contrats_df" not in st.session_state:
+    st.session_state.contrats_df = None
 
 def load_data():
-    actions_df = load_parquet("planning_rh/actions.parquet", ACTIONS_COLS)
-    gen_df     = load_parquet("planning_rh/generateur.parquet", GENERATEUR_COLS)
-    # Crée les fichiers dans R2 s'ils n'existent pas encore
-    if actions_df.empty:
-        try:
-            save_parquet(actions_df, "planning_rh/actions.parquet")
-        except Exception as e:
-            st.warning(f"⚠️ Impossible de créer actions.parquet : {e}")
-    if gen_df.empty:
-        try:
-            save_parquet(gen_df, "planning_rh/generateur.parquet")
-        except Exception as e:
-            st.warning(f"⚠️ Impossible de créer generateur.parquet : {e}")
-    st.session_state.actions_df = actions_df
-    st.session_state.gen_df     = gen_df
+    actions_df  = load_parquet("planning_rh/actions.parquet", ACTIONS_COLS)
+    gen_df      = load_parquet("planning_rh/generateur.parquet", GENERATEUR_COLS)
+    contrats_df = load_parquet("planning_rh/contrats.parquet", CONTRATS_COLS)
+    for df, key in [(actions_df, "planning_rh/actions.parquet"),
+                    (gen_df,     "planning_rh/generateur.parquet"),
+                    (contrats_df,"planning_rh/contrats.parquet")]:
+        if df.empty:
+            try: save_parquet(df, key)
+            except Exception as e: st.warning(f"⚠️ Impossible de créer {key} : {e}")
+    st.session_state.actions_df  = actions_df
+    st.session_state.gen_df      = gen_df
+    st.session_state.contrats_df = contrats_df
 
 def reload_and_regen():
     gen_df = generate_occurrences(st.session_state.actions_df)
@@ -214,7 +282,7 @@ with st.sidebar:
     st.markdown("---")
     page = st.radio(
         "Navigation",
-        ["🏠 Tableau de bord", "➕ Nouvelle action", "✏️ Gérer les actions", "📅 Planning"],
+        ["🏠 Tableau de bord", "📄 Nouveau contrat", "➕ Nouvelle action", "✏️ Gérer les actions", "📅 Planning"],
         label_visibility="collapsed"
     )
     st.markdown("---")
@@ -225,8 +293,9 @@ with st.sidebar:
 if st.session_state.actions_df is None:
     load_data()
 
-actions_df = st.session_state.actions_df
-gen_df     = st.session_state.gen_df
+actions_df  = st.session_state.actions_df
+gen_df      = st.session_state.gen_df
+contrats_df = st.session_state.contrats_df
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: TABLEAU DE BORD
@@ -297,6 +366,173 @@ if page == "🏠 Tableau de bord":
         with col2:
             st.markdown('<div class="section-title">Par responsable</div>', unsafe_allow_html=True)
             st.dataframe(gen.groupby("responsable")["statut"].value_counts().unstack(fill_value=0), use_container_width=True)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE: NOUVEAU CONTRAT
+# ══════════════════════════════════════════════════════════════════════════════
+elif page == "📄 Nouveau contrat":
+    st.markdown("# Nouveau contrat")
+
+    if contrats_df is None:
+        contrats_df = pd.DataFrame(columns=CONTRATS_COLS)
+
+    next_contrat_id = 1 if contrats_df.empty or "id_contrat" not in contrats_df.columns else int(contrats_df["id_contrat"].max()) + 1
+
+    st.markdown(
+        f'<div class="card"><span style="font-size:12px;color:#8890a8;font-family:\'DM Mono\',monospace">'
+        f'ID contrat auto-assigné : <b>#{next_contrat_id}</b></span></div>',
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="section-title">Étape 1 — Informations du contrat</div>', unsafe_allow_html=True)
+
+    with st.form("form_contrat", clear_on_submit=False):
+        st.markdown('<div class="section-title">Ressource</div>', unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1: id_ressource  = st.text_input("ID Ressource *", placeholder="Ex: EMP-001")
+        with c2: nom_ressource = st.text_input("Nom complet *",  placeholder="Ex: Jean Dupont")
+        with c3: poste         = st.text_input("Poste / Fonction", placeholder="Ex: Développeur")
+
+        st.markdown('<div class="section-title">Contrat</div>', unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1: type_contrat   = st.selectbox("Type de contrat *", TYPES_CONTRAT)
+        with c2: temps_travail  = st.selectbox("Temps de travail", TEMPS_TRAVAIL)
+        with c3: statut_contrat = st.selectbox("Statut", STATUTS_CONTRAT)
+
+        st.markdown('<div class="section-title">Dates</div>', unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1: date_debut_c   = st.date_input("Date de début *", value=date.today())
+        with c2: date_fin_essai = st.date_input("Fin période d'essai", value=date.today() + timedelta(days=90))
+        with c3: has_date_fin   = st.checkbox("Date de fin prévue ?", value=False)
+
+        date_fin_c = None
+        if has_date_fin:
+            date_fin_c = st.date_input("Date de fin de contrat", value=date.today() + timedelta(days=365))
+
+        st.markdown('<div class="section-title">Autres informations</div>', unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        with c1: salaire      = st.number_input("Salaire brut mensuel (€)", min_value=0, value=0, step=100)
+        with c2: lieu_travail = st.text_input("Lieu de travail", placeholder="Ex: Paris / Remote")
+        with c3: notes        = st.text_area("Notes", placeholder="Informations complémentaires...", height=80)
+
+        valider_etape1 = st.form_submit_button("Suivant — Choisir les actions ▶", use_container_width=True, type="primary")
+
+    if valider_etape1:
+        if not id_ressource or not nom_ressource:
+            st.error("L'ID et le nom de la ressource sont obligatoires.")
+        else:
+            st.session_state["contrat_draft"] = {
+                "id_contrat": next_contrat_id, "id_ressource": id_ressource,
+                "nom_ressource": nom_ressource, "type_contrat": type_contrat,
+                "date_debut": date_debut_c, "date_fin": date_fin_c,
+                "date_fin_essai": date_fin_essai, "poste": poste,
+                "salaire": salaire, "temps_travail": temps_travail,
+                "lieu_travail": lieu_travail, "statut_contrat": statut_contrat,
+                "notes": notes,
+            }
+
+    # ── Étape 2 : Sélection des actions ──────────────────────────────────────
+    if "contrat_draft" in st.session_state:
+        draft = st.session_state["contrat_draft"]
+        tc    = draft["type_contrat"]
+        actions_proposees = ACTIONS_CONTRAT.get(tc, [])
+
+        st.markdown("---")
+        st.markdown(
+            f'<div class="section-title">Étape 2 — Actions proposées pour un contrat {tc} '
+            f'· {draft["nom_ressource"]}</div>',
+            unsafe_allow_html=True,
+        )
+        st.caption("Cochez les actions à générer automatiquement. Vous pourrez les modifier ensuite dans Gérer les actions.")
+
+        # En-tête tableau
+        h0, h1, h2, h3, h4, h5 = st.columns([0.3, 3, 2, 1, 2, 1])
+        for col, lbl in zip([h0,h1,h2,h3,h4,h5], ["✓","Nom de l'action","Type","Durée","Règle deadline","Jour"]):
+            col.markdown(f'<div style="font-size:11px;font-weight:600;color:#8890a8;text-transform:uppercase;padding-bottom:4px;border-bottom:1px solid #e8eaf0">{lbl}</div>', unsafe_allow_html=True)
+
+        checks = {}
+        for idx, act in enumerate(actions_proposees):
+            c0, c1, c2, c3, c4, c5 = st.columns([0.3, 3, 2, 1, 2, 1])
+            with c0: checks[idx] = st.checkbox("", value=True, key=f"chk_act_{idx}", label_visibility="collapsed")
+            with c1:
+                bg = "#e6f9f0" if checks.get(idx, True) else "#f5f6fa"
+                st.markdown(f'<div style="padding:6px 0;font-size:13px;font-weight:500">{act["nom"]}</div>', unsafe_allow_html=True)
+            with c2: st.markdown(f'<div style="padding:6px 0;font-size:12px;color:#8890a8">{act["type"]}</div>', unsafe_allow_html=True)
+            with c3: st.markdown(f'<div style="padding:6px 0;font-size:13px">{act["duree"]}j</div>', unsafe_allow_html=True)
+            with c4: st.markdown(f'<div style="padding:6px 0;font-size:12px">{act["regle"]}</div>', unsafe_allow_html=True)
+            with c5: st.markdown(f'<div style="padding:6px 0;font-size:13px">{act["jour"]}</div>', unsafe_allow_html=True)
+
+        selected_actions = [actions_proposees[i] for i, checked in checks.items() if checked]
+        st.markdown(f'<div style="margin-top:8px;font-size:13px;color:#8890a8"><b>{len(selected_actions)}</b> action(s) sélectionnée(s)</div>', unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:12px'></div>", unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("✅ Créer le contrat et les actions", type="primary", use_container_width=True):
+                if not selected_actions:
+                    st.warning("Sélectionnez au moins une action.")
+                else:
+                    new_contrat = {
+                        "id_contrat":    draft["id_contrat"],
+                        "id_ressource":  draft["id_ressource"],
+                        "nom_ressource": draft["nom_ressource"],
+                        "type_contrat":  draft["type_contrat"],
+                        "date_debut":    pd.Timestamp(draft["date_debut"]),
+                        "date_fin":      pd.Timestamp(draft["date_fin"]) if draft["date_fin"] else None,
+                        "date_fin_essai":pd.Timestamp(draft["date_fin_essai"]),
+                        "poste":         draft["poste"],
+                        "salaire":       draft["salaire"],
+                        "temps_travail": draft["temps_travail"],
+                        "lieu_travail":  draft["lieu_travail"],
+                        "statut_contrat":draft["statut_contrat"],
+                        "notes":         draft["notes"],
+                    }
+                    st.session_state.contrats_df = pd.concat(
+                        [st.session_state.contrats_df, pd.DataFrame([new_contrat])], ignore_index=True
+                    )
+                    next_action_id = (
+                        1 if actions_df.empty or "id" not in actions_df.columns
+                        else int(actions_df["id"].max()) + 1
+                    )
+                    new_actions = []
+                    for i, act in enumerate(selected_actions):
+                        new_actions.append({
+                            "id": next_action_id + i,
+                            "nom_action":     act["nom"] + f" — {draft['nom_ressource']}",
+                            "type":           act["type"],
+                            "frequence":      "Ponctuelle",
+                            "date_debut":     pd.Timestamp(draft["date_debut"]),
+                            "duree":          act["duree"],
+                            "regle_deadline": act["regle"],
+                            "jour_deadline":  act["jour"],
+                            "mois_specifique":None,
+                            "responsable":    "RH",
+                            "priorite":       "Haute",
+                            "actif":          "Oui",
+                            "nom_ressource":  draft["nom_ressource"],
+                            "id_ressource":   draft["id_ressource"],
+                        })
+                    st.session_state.actions_df = pd.concat(
+                        [actions_df, pd.DataFrame(new_actions)], ignore_index=True
+                    )
+                    try:
+                        gen_new = generate_occurrences(st.session_state.actions_df)
+                        new_ids = [a["id"] for a in new_actions]
+                        gen_new.loc[gen_new["id_action"].isin(new_ids), "id_contrat"] = draft["id_contrat"]
+                        st.session_state.gen_df = gen_new
+                        save_parquet(st.session_state.actions_df,  "planning_rh/actions.parquet")
+                        save_parquet(st.session_state.gen_df,       "planning_rh/generateur.parquet")
+                        save_parquet(st.session_state.contrats_df,  "planning_rh/contrats.parquet")
+                        del st.session_state["contrat_draft"]
+                        st.success(f"✅ Contrat #{draft['id_contrat']} créé avec {len(selected_actions)} action(s) !")
+                        st.balloons()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erreur sauvegarde R2 : {e}")
+        with c2:
+            if st.button("✖ Annuler", use_container_width=True):
+                del st.session_state["contrat_draft"]
+                st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: NOUVELLE ACTION
