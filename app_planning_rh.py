@@ -69,7 +69,7 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 """, unsafe_allow_html=True)
 
 # ─── PARAMS ────────────────────────────────────────────────────────────────────
-TYPES        = ["Paie", "Fiscal", "Administratif RH"]
+TYPES        = ["Paietest", "Fiscal", "Administratif RH"]
 FREQUENCES   = ["Mensuelle", "Annuelle", "Ponctuelle"]
 STATUTS      = ["À venir", "En cours", "Fait", "En retard"]
 REGLES_DL    = ["Fin de mois", "M+1", "Date fixe", "J+X"]
