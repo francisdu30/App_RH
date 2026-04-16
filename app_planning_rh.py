@@ -29,6 +29,14 @@ html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 .sidebar-sep { border-top:1px solid #2a2f45; margin:12px 0; }
 .sidebar-section { font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#4a5070 !important; padding:4px 0 2px; }
 .stButton > button { border-radius:8px; font-weight:600; font-family:'DM Sans',sans-serif; }
+/* Séparateurs dans le menu radio : masque le bouton radio, style en titre */
+[data-testid="stSidebar"] div[data-testid="stRadio"] > div > label:has(div p) {
+    cursor: default;
+}
+[data-testid="stSidebar"] div[data-testid="stRadio"] > div > label p {
+    font-size: 13px !important;
+}
+
 .planning-table { width:100%; border-collapse:collapse; font-size:13px; }
 .planning-table th { background:#0f1117; color:#e0e4f0; padding:10px 14px; text-align:left; font-weight:500; font-size:12px; letter-spacing:.04em; white-space:nowrap; }
 .planning-table td { padding:10px 14px; border-bottom:1px solid #f0f1f5; vertical-align:middle; }
@@ -238,63 +246,34 @@ with st.sidebar:
     st.markdown("## 📋 Planning RH")
     st.markdown("---")
 
-    st.markdown('<div class="sidebar-section">Tableau de bord</div>', unsafe_allow_html=True)
-    page = st.radio("nav", [
-        "🏠 Tableau de bord",
-    ], label_visibility="collapsed", key="nav_dash")
-
-    st.markdown('<hr class="sidebar-sep">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section">Contrats</div>', unsafe_allow_html=True)
-    page_contrat = st.radio("nav_c", [
-        "📄 Nouveau contrat",
-        "📋 Gérer les contrats",
-    ], label_visibility="collapsed", key="nav_cont")
-
-    st.markdown('<hr class="sidebar-sep">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section">Actions</div>', unsafe_allow_html=True)
-    page_action = st.radio("nav_a", [
-        "➕ Nouvelle action",
-        "✏️ Gérer les actions",
-        "✅ Actions terminées",
-    ], label_visibility="collapsed", key="nav_act")
-
-    st.markdown('<hr class="sidebar-sep">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section">Planning</div>', unsafe_allow_html=True)
-    page_planning = st.radio("nav_p", [
-        "📅 Planning",
-    ], label_visibility="collapsed", key="nav_plan")
-
-    st.markdown('<hr class="sidebar-sep">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section">Paramètres</div>', unsafe_allow_html=True)
-    page_param = st.radio("nav_s", [
-        "⚙️ Paramétrage types de contrats",
-    ], label_visibility="collapsed", key="nav_set")
+    page_active = st.radio(
+        "Navigation",
+        [
+            "🏠 Tableau de bord",
+            "── Contrats ──",
+            "📄 Nouveau contrat",
+            "📋 Gérer les contrats",
+            "── Actions ──",
+            "➕ Nouvelle action",
+            "✏️ Gérer les actions",
+            "✅ Actions terminées",
+            "── Planning ──",
+            "📅 Planning",
+            "── Paramètres ──",
+            "⚙️ Paramétrage types de contrats",
+        ],
+        label_visibility="collapsed",
+    )
 
     st.markdown("---")
     if st.button("🔄 Recharger", use_container_width=True):
         load_data()
         st.success("Données rechargées.")
 
-# Déterminer la page active
-all_pages = {
-    "🏠 Tableau de bord":             st.session_state.get("nav_dash"),
-    "📄 Nouveau contrat":             st.session_state.get("nav_cont"),
-    "📋 Gérer les contrats":          st.session_state.get("nav_cont"),
-    "➕ Nouvelle action":              st.session_state.get("nav_act"),
-    "✏️ Gérer les actions":           st.session_state.get("nav_act"),
-    "✅ Actions terminées":           st.session_state.get("nav_act"),
-    "📅 Planning":                    st.session_state.get("nav_plan"),
-    "⚙️ Paramétrage types de contrats": st.session_state.get("nav_set"),
-}
-
-# La page active est celle dont la valeur radio correspond
-page_active = (
-    st.session_state.get("nav_dash") or
-    st.session_state.get("nav_cont") or
-    st.session_state.get("nav_act")  or
-    st.session_state.get("nav_plan") or
-    st.session_state.get("nav_set")
-)
+# Les séparateurs ne sont pas des pages — on redirige vers la première vraie page suivante
+SEPARATEURS = {"── Contrats ──", "── Actions ──", "── Planning ──", "── Paramètres ──"}
+if page_active in SEPARATEURS:
+    page_active = "🏠 Tableau de bord"
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PAGE: TABLEAU DE BORD
